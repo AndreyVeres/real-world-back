@@ -91,28 +91,25 @@ export class ArticleService {
   }
 
   public async findAll(userId: number, query: QueryFilters): Promise<ArticlesResponse> {
-    const { limit, offset, author, tag, favorited  , search, sortOrder = 'DESC' } = query;
+    const { limit, offset, author, tag, favorited, search, sortOrder = 'DESC' } = query;
+
     const queryBuilder = this.dataSource
       .getRepository(ArticleEntity)
       .createQueryBuilder('articles')
       .leftJoinAndSelect('articles.author', 'author')
-      .orderBy('articles.createdAt', sortOrder as SortType);
-
-    const articlesCount = await queryBuilder.getCount();
+      .orderBy('articles.createdAt', sortOrder as SortType)
+      .distinct(true);
 
     if (search) {
       queryBuilder.andWhere('articles.title ILIKE :title', {
         title: `%${search}%`,
       });
     }
-
-    
     if (author) {
       queryBuilder.andWhere('author.username = :username', {
         username: author,
       });
     }
-
 
     if (favorited) {
       const user = await this.userRepository.findOne({ where: { username: favorited }, relations: ['favorites'] });
@@ -135,6 +132,8 @@ export class ArticleService {
         });
       });
     }
+    const articlesCount = await queryBuilder.getCount();
+
 
     if (limit) {
       queryBuilder.limit(Number(limit));
