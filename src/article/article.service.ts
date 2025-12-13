@@ -12,7 +12,6 @@ import { QueryFilters, SortType } from './types/queryFilters.type';
 import { FollowEntity } from '@app/profile/follow.entity';
 import { ProfileService } from '@app/profile/profile.service';
 import { CommentEntity } from './comment.entity';
-import { Article } from './types/article.type';
 
 @Injectable()
 export class ArticleService {
@@ -194,7 +193,7 @@ export class ArticleService {
     return { article };
   }
 
-  public async findBySlug(slug: string, currentUserId?: number): Promise<Article> {
+  public async findBySlug(slug: string, currentUserId?: number) {
     const article = await this.articleRepository.findOne({ where: { slug } });
 
     if (!article) {
@@ -202,7 +201,6 @@ export class ArticleService {
     }
 
     let favoridedIds: number[] = [];
-
     if (currentUserId) {
       const user = await this.userRepository.findOne({
         where: { id: currentUserId },
@@ -214,10 +212,12 @@ export class ArticleService {
       }
     }
 
+    const author = await this.profileService.getProfile(article.author.username, currentUserId);
     const favorited = favoridedIds.includes(article.id);
 
     const articleWithFavorited = {
       ...article,
+      author,
       favorited,
     };
 
