@@ -53,9 +53,9 @@ export class ArticleController {
   }
 
   @Get(':slug')
-  public async findBySlug(@Param('slug') slug: string): Promise<ArticleResponse> {
-    const article = await this.articleService.findBySlug(slug);
-    return this.articleService.buildArticleResponse(article);
+  public async findBySlug(@Param('slug') slug: string, @User('id') currentUserId: number) {
+    const article = await this.articleService.findBySlug(slug, currentUserId);
+    return { article };
   }
 
   @Delete(':slug')

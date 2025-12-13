@@ -12,6 +12,7 @@ import { QueryFilters, SortType } from './types/queryFilters.type';
 import { FollowEntity } from '@app/profile/follow.entity';
 import { ProfileService } from '@app/profile/profile.service';
 import { CommentEntity } from './comment.entity';
+import { Article } from './types/article.type';
 
 @Injectable()
 export class ArticleService {
@@ -25,7 +26,12 @@ export class ArticleService {
   ) {}
 
   public async unfavorite(userId: number, slug: string): Promise<ArticleEntity> {
-    const article = await this.findBySlug(slug);
+    const article = await this.articleRepository.findOne({ where: { slug } });
+
+    if (!article) {
+      throw new BadRequestException('article not found');
+    }
+
     const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['favorites'] });
 
     const articleIndex = user.favorites.findIndex((favorite) => favorite.id === article.id);
@@ -42,7 +48,11 @@ export class ArticleService {
   }
 
   public async favorite(userId: number, slug: string) {
-    const article = await this.findBySlug(slug);
+    const article = await this.articleRepository.findOne({ where: { slug } });
+
+    if (!article) {
+      throw new BadRequestException('article not found');
+    }
     const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['favorites'] });
 
     const isAlreadyInFavorites = user.favorites.find((favorite) => favorite.id === article.id);
@@ -134,7 +144,6 @@ export class ArticleService {
     }
     const articlesCount = await queryBuilder.getCount();
 
-
     if (limit) {
       queryBuilder.limit(Number(limit));
     }
@@ -185,18 +194,38 @@ export class ArticleService {
     return { article };
   }
 
-  public async findBySlug(slug: string): Promise<ArticleEntity> {
+  public async findBySlug(slug: string, currentUserId?: number): Promise<Article> {
     const article = await this.articleRepository.findOne({ where: { slug } });
 
     if (!article) {
       throw new BadRequestException('article not found');
     }
 
-    return article;
+    let favoridedIds: number[] = [];
+
+    if (currentUserId) {
+      const user = await this.userRepository.findOne({
+        where: { id: currentUserId },
+        relations: ['favorites'],
+      });
+
+      if (user) {
+        favoridedIds = user.favorites.map((f) => f.id);
+      }
+    }
+
+    const favorited = favoridedIds.includes(article.id);
+
+    const articleWithFavorited = {
+      ...article,
+      favorited,
+    };
+
+    return articleWithFavorited;
   }
 
   public async deleteArticle(slug: string, userId: number) {
-    const article = await this.findBySlug(slug);
+    const article = await this.articleRepository.findOne({ where: { slug } });
 
     if (!article) throw new NotFoundException('Article does not exists');
 
@@ -211,7 +240,7 @@ export class ArticleService {
   }
 
   public async updateArticle(slug: string, userId: number, updateArticleDto: UpdateArticleDto) {
-    const article = await this.findBySlug(slug);
+    const article = await this.articleRepository.findOne({ where: { slug } });
 
     if (!article) throw new NotFoundException('Article does not exists');
     if (article.author.id !== userId) throw new ForbiddenException('This user cant update this article');

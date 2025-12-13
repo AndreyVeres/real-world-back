@@ -63,16 +63,25 @@ export class ProfileService {
     const profile = await this.userRepository.findOne({ where: { username: profileName } });
     if (!profile) throw new NotFoundException('Profile not found');
 
-    const follow = await this.followsRepository.findOne({
+    const followPromise = this.followsRepository.findOne({
       where: {
         followerId: userId,
         followingId: profile.id,
       },
     });
 
+    const allFollowPromise = this.followsRepository.find({
+      where: {
+        followingId: profile.id,
+      },
+    });
+
+    const [follow, allFollow] = await Promise.all([followPromise, allFollowPromise]);
+
     return {
       ...profile,
       following: !!follow,
+      followersCount: allFollow.length,
     };
   }
 
