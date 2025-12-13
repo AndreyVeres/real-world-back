@@ -84,7 +84,17 @@ export class ArticleService {
 
     const articlesCount = await queryBuilder.getCount();
 
-    const { offset, limit } = query;
+    const { offset, limit, tag } = query;
+
+    if (tag) {
+      const tags = tag.split(',').filter(Boolean);
+
+      tags.forEach((tag) => {
+        queryBuilder.andWhere('articles.tagList LIKE :tag', {
+          tag: `%${tag}%`,
+        });
+      });
+    }
 
     if (offset) {
       queryBuilder.offset(Number(offset));
