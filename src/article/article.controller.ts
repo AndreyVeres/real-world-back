@@ -14,6 +14,7 @@ import { ApiTags } from '@nestjs/swagger';
 
 import { ArticleEntity } from './article.entity';
 import { AppSwagger } from '@app/swagger.config';
+// import { sleep } from '@app/shared/sleep';
 
 @ApiTags('articles')
 @Controller('articles')
@@ -24,11 +25,13 @@ export class ArticleController {
   @Get('feed')
   @UseGuards(AuthGuard)
   async getFeed(@User('id') userId: number, @Query() query: QueryFilters) {
+
     return this.articleService.getFeed(userId, query);
   }
 
   @Get()
   async findAll(@User('id') currentUserId: number, @Query() query: QueryFilters): Promise<ArticlesResponse> {
+    // await sleep()
     return await this.articleService.findAll(currentUserId, query);
   }
 
@@ -89,7 +92,7 @@ export class ArticleController {
   @Get(':slug/comments')
   public async getComments(@Param('slug') slug: string, @User('id') userId: number) {
     const comments = await this.articleService.getArticleComments(slug, userId);
-
+    // await sleep()
     return comments;
   }
 

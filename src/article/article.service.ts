@@ -80,11 +80,10 @@ export class ArticleService {
       .getRepository(ArticleEntity)
       .createQueryBuilder('articles')
       .leftJoinAndSelect('articles.author', 'author')
-      .where('articles.authorId IN (:...ids)', { ids: followsUsersIds });
+      .where('articles.authorId IN (:...ids)', { ids: followsUsersIds })
+      .distinct(true);
 
-    const articlesCount = await queryBuilder.getCount();
-
-    const { offset, limit, tag } = query;
+    const { offset, limit, tag, search } = query;
 
     if (tag) {
       const tags = tag.split(',').filter(Boolean);
@@ -104,9 +103,32 @@ export class ArticleService {
       queryBuilder.limit(Number(limit));
     }
 
-    const articles = await queryBuilder.getMany();
+    if (search) {
+      queryBuilder.andWhere('articles.title ILIKE :title', {
+        title: `%${search}%`,
+      });
+    }
 
-    return { articles, articlesCount };
+    let favoridedIds: number[] = [];
+
+    if (userId) {
+      const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['favorites'] });
+
+      favoridedIds = user.favorites.map((f) => f.id);
+    }
+
+    const articles = await queryBuilder.getMany();
+    const articlesCount = await queryBuilder.getCount();
+    const articleWithFavorites = articles.map((article) => {
+      const favorited = favoridedIds.includes(article.id);
+
+      return {
+        ...article,
+        favorited,
+      };
+    });
+
+    return { articles: articleWithFavorites, articlesCount };
   }
 
   public async findAll(userId: number, query: QueryFilters): Promise<ArticlesResponse> {
@@ -179,6 +201,8 @@ export class ArticleService {
         favorited,
       };
     });
+
+    console.log(articleWithFavorites, '!');
 
     return {
       articles: articleWithFavorites,
