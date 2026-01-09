@@ -31,7 +31,6 @@ export class ArticleController {
 
   @Get()
   async findAll(@User('id') currentUserId: number, @Query() query: QueryFilters): Promise<ArticlesResponse> {
-    // await sleep()
     return await this.articleService.findAll(currentUserId, query);
   }
 

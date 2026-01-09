@@ -95,6 +95,8 @@ export class ArticleService {
       });
     }
 
+    const articlesCount = await queryBuilder.getCount();
+
     if (offset) {
       queryBuilder.offset(Number(offset));
     }
@@ -118,7 +120,7 @@ export class ArticleService {
     }
 
     const articles = await queryBuilder.getMany();
-    const articlesCount = await queryBuilder.getCount();
+
     const articleWithFavorites = articles.map((article) => {
       const favorited = favoridedIds.includes(article.id);
 
@@ -138,6 +140,7 @@ export class ArticleService {
       .getRepository(ArticleEntity)
       .createQueryBuilder('articles')
       .leftJoinAndSelect('articles.author', 'author')
+      .leftJoinAndSelect('articles.comments', 'comments')
       .orderBy('articles.createdAt', sortOrder as SortType)
       .distinct(true);
 
@@ -199,10 +202,9 @@ export class ArticleService {
       return {
         ...article,
         favorited,
+        commentsCount: article.comments.length,
       };
     });
-
-    console.log(articleWithFavorites, '!');
 
     return {
       articles: articleWithFavorites,
